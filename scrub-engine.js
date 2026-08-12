@@ -83,6 +83,13 @@ function mountScrollWorld(container, config) {
   const N = SECTIONS.length;
   if (!N) return;
 
+  // Optional map of original URL → already-fetched blob:/https URL from a page loader.
+  const ASSET_MAP = config.assetMap || {};
+  function resolveAsset(url) {
+    if (!url) return url;
+    return ASSET_MAP[url] || url;
+  }
+
   injectCSS();
   container.classList.add('sw-root');
 
@@ -141,8 +148,8 @@ function mountScrollWorld(container, config) {
   // segment scenes
   SEGMENTS.forEach(s => {
     const scene = el('div', 'sw-scene'); scene.style.setProperty('--sw-accent', s.accent || '');
-    const img = el('img', 'sw-scene__still'); img.alt = ''; img.decoding = 'async'; img.loading = 'lazy';
-    const poster = (isMobile() && s.stillM) ? s.stillM : s.still;
+    const img = el('img', 'sw-scene__still'); img.alt = ''; img.decoding = 'async'; img.loading = 'eager';
+    const poster = resolveAsset((isMobile() && s.stillM) ? s.stillM : s.still);
     if (poster) img.src = poster;
     scene.appendChild(img); stage.appendChild(scene);
     s.el = scene; s.img = img; s.video = null; s.hasClip = false;
@@ -198,34 +205,44 @@ function mountScrollWorld(container, config) {
     window.scrollTo({ top: seg.start + (seg.end - seg.start) * 0.5, behavior: reduce ? 'auto' : 'smooth' });
   }
 
+  function attachVideo(s, src) {
+    const v = document.createElement('video');
+    v.className = 'sw-scene__video';
+    v.muted = true; v.playsInline = true; v.preload = 'auto';
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
+    v.setAttribute('webkit-playsinline', '');
+    v.src = src;
+    v.addEventListener('loadedmetadata', () => { s.ready = true; read(); });
+    // Keep the still photo visible under the video; only mark when a frame paints.
+    v.addEventListener('seeked', () => { s.el.classList.add('has-clip'); }, { once: true });
+    v.addEventListener('loadeddata', () => {
+      try { v.pause(); } catch (e) {}
+      try { if (v.currentTime < 0.001) v.currentTime = 0.001; } catch (e) {}
+      s.el.classList.add('has-clip');
+      if (userReady) primeVideo(v);
+    });
+    s.el.appendChild(v); s.video = v; s.hasClip = true;
+  }
+
   function loadClip(s) {
     // Under prefers-reduced-motion we never load the clips at all — the stills stay up
     // and simply cross-dissolve as you scroll. No scrubbed video motion, no decode cost.
     if (reduce || s.loading || !s.clip) return;
     s.loading = true;
     // Serve the lighter mobile encode on phones when one was provided.
-    const url = (isMobile() && s.clipM) ? s.clipM : s.clip;
+    const url = resolveAsset((isMobile() && s.clipM) ? s.clipM : s.clip);
+    // Prefer direct src (range requests / preloaded blob URLs) — more reliable than
+    // a second fetch on phones and GitHub Pages.
+    if (url.indexOf('blob:') === 0 || ASSET_MAP[(isMobile() && s.clipM) ? s.clipM : s.clip]) {
+      attachVideo(s, url);
+      return;
+    }
     fetch(url).then(r => r.ok ? r.blob() : Promise.reject(new Error('404')))
-      .then(blob => {
-        const v = document.createElement('video');
-        v.className = 'sw-scene__video';
-        v.muted = true; v.playsInline = true; v.preload = 'auto';
-        v.setAttribute('muted', ''); v.setAttribute('playsinline', '');
-        v.src = URL.createObjectURL(blob);
-        v.addEventListener('loadedmetadata', () => { s.ready = true; read(); });
-        // Reveal the video (hide the still poster) only once a real frame has
-        // painted — on iOS a seeked-but-never-played muted video stays blank, so
-        // hiding the still on metadata alone would flash an empty scene.
-        v.addEventListener('seeked', () => { s.el.classList.add('has-clip'); }, { once: true });
-        v.addEventListener('loadeddata', () => {
-          try { v.pause(); } catch (e) {}
-          // Force a paintable frame so the still poster can hide (otherwise many
-          // browsers keep showing only the poster until the first real seek).
-          try { if (v.currentTime < 0.001) v.currentTime = 0.001; } catch (e) {}
-          if (userReady) primeVideo(v);
-        });
-        s.el.appendChild(v); s.video = v; s.hasClip = true;
-      }).catch(() => { s.loading = false; });
+      .then(blob => attachVideo(s, URL.createObjectURL(blob)))
+      .catch(() => {
+        // Last resort: try plain src without blob wrapping.
+        try { attachVideo(s, url); } catch (e) { s.loading = false; }
+      });
   }
 
   function read() {
@@ -244,10 +261,16 @@ function mountScrollWorld(container, config) {
       const op = smooth(1 - outside / fade);
       s.el.style.opacity = op; s.visible = op > 0.001;
       s.el.style.zIndex = (i === ci) ? '120' : String(100 + Math.round(op * 10));
-      if (!s.hasClip || !s.ready) {
-        const sc = reduce ? 1 : 1.03 + local * 0.14;
-        s.img.style.transform = `translateX(${stageX - 2}vw) scale(${sc.toFixed(3)})`;
+      // Always keep the photo in play: Ken Burns on the still, and only gently fade
+      // it as the scrubbed video takes over mid-scene.
+      const sc = reduce ? 1 : 1.03 + local * 0.14;
+      s.img.style.transform = `translateX(${stageX - 2}vw) scale(${sc.toFixed(3)})`;
+      if (s.hasClip && s.ready) {
+        s.img.style.opacity = String((1 - smooth(clamp((local - 0.08) / 0.35))).toFixed(3));
+      } else {
+        s.img.style.opacity = '1';
       }
+      if (s.video) s.video.style.opacity = (s.hasClip && s.ready) ? '1' : '0';
     }
 
     for (let i = 0; i < N; i++) {
@@ -392,7 +415,8 @@ function injectCSS() {
   .sw-stage{position:fixed;inset:0;z-index:10;pointer-events:none;}
   .sw-scene{position:absolute;inset:0;opacity:0;overflow:hidden;will-change:opacity;}
   .sw-scene__video,.sw-scene__still{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center 42%;}
-  .sw-scene__still{will-change:transform;} .sw-scene.has-clip .sw-scene__still{opacity:0;} .sw-scene__video{z-index:1;}
+  .sw-scene__still{will-change:transform,opacity;z-index:2;transition:opacity .15s linear;}
+  .sw-scene__video{z-index:1;opacity:0;background:#000;}
   .sw-copylayer{position:fixed;inset:0;z-index:20;pointer-events:none;}
   .sw-copylayer::before{content:"";position:absolute;inset:0;width:min(58vw,780px);background:linear-gradient(90deg,var(--sw-bg) 0%,color-mix(in srgb,var(--sw-bg) 82%,transparent) 34%,color-mix(in srgb,var(--sw-bg) 40%,transparent) 62%,transparent 100%);}
   .sw-copy{position:absolute;left:clamp(18px,5vw,64px);top:50%;transform:translateY(-50%);width:min(42vw,460px);opacity:0;will-change:opacity,transform;}
