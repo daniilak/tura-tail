@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <title>Турă — чувашская сказка-происхождение</title>
   <meta name="description" content="Scroll-world по чувашской сказке о Турă: сотворение мира, злые духи и обряд чӳклеме." />
+  <link rel="icon" href="assets/favicon.png" type="image/png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,600;1,7..72,400&family=Podkova:wght@500;700&display=swap" rel="stylesheet" />
@@ -251,9 +252,9 @@
       <p class="loader__brand">Турă</p>
       <p class="loader__sub">Загружаем мир сказки…</p>
       <div class="loader__thumbs" id="loaderThumbs">
-        <img data-src="assets/before.webp" alt="" />
-        <img data-src="assets/challenge.webp" alt="" />
-        <img data-src="assets/miracle.webp" alt="" />
+        <img data-src="assets/before.jpg" alt="" />
+        <img data-src="assets/challenge.jpg" alt="" />
+        <img data-src="assets/miracle.jpg" alt="" />
       </div>
       <div class="loader__bar" aria-hidden="true"><span id="loaderBar"></span></div>
       <p class="loader__pct"><span id="loaderPct">0</span>%</p>
@@ -273,15 +274,15 @@
         <h2>Сцены мира</h2>
         <div class="gallery">
           <figure>
-            <img src="assets/before.webp" alt="Сотворение: деревня у озера" width="1800" height="1028" loading="lazy" />
+            <img src="assets/before.jpg" alt="Сотворение: деревня у озера" width="1800" height="1028" loading="lazy" />
             <figcaption>01 · Сотворение — деревня у озера</figcaption>
           </figure>
           <figure>
-            <img src="assets/challenge.webp" alt="Раздор: дух над водой" width="1800" height="1028" loading="lazy" />
+            <img src="assets/challenge.jpg" alt="Раздор: дух над водой" width="1800" height="1028" loading="lazy" />
             <figcaption>02 · Раздор — свет над водой</figcaption>
           </figure>
           <figure>
-            <img src="assets/miracle.webp" alt="Чӳклеме: обращение к небу" width="1800" height="1028" loading="lazy" />
+            <img src="assets/miracle.jpg" alt="Чӳклеме: обращение к небу" width="1800" height="1028" loading="lazy" />
             <figcaption>03 · Чӳклеме — дождь после молитвы</figcaption>
           </figure>
         </div>
@@ -352,9 +353,9 @@
   <script>
     (function () {
       const ASSETS = [
-        { url: 'assets/before.webp', kind: 'image', thumb: 0 },
-        { url: 'assets/challenge.webp', kind: 'image', thumb: 1 },
-        { url: 'assets/miracle.webp', kind: 'image', thumb: 2 },
+        { url: 'assets/before.jpg', kind: 'image', thumb: 0 },
+        { url: 'assets/challenge.jpg', kind: 'image', thumb: 1 },
+        { url: 'assets/miracle.jpg', kind: 'image', thumb: 2 },
         { url: 'assets/vid/before.mp4', kind: 'video' },
         { url: 'assets/vid/challenge.mp4', kind: 'video' },
         { url: 'assets/vid/miracle.mp4', kind: 'video' },
@@ -412,7 +413,7 @@
             {
               id: 'before',
               label: 'Сотворение',
-              still: 'assets/before.webp',
+              still: 'assets/before.jpg',
               clip: 'assets/vid/before.mp4',
               accent: '#8FB98A',
               eyebrow: 'Мир Турă',
@@ -423,7 +424,7 @@
             {
               id: 'challenge',
               label: 'Раздор',
-              still: 'assets/challenge.webp',
+              still: 'assets/challenge.jpg',
               clip: 'assets/vid/challenge.mp4',
               accent: '#C4A35A',
               eyebrow: 'Усалы и Шуйтаны',
@@ -434,7 +435,7 @@
             {
               id: 'miracle',
               label: 'Чӳклеме',
-              still: 'assets/miracle.webp',
+              still: 'assets/miracle.jpg',
               clip: 'assets/vid/miracle.mp4',
               accent: '#c45c48',
               eyebrow: 'Прощение',
